@@ -125,5 +125,5 @@ if __name__ == '__main__':
         raise FileNotFoundError(f"'punkt' resource not found in {NLTK_DATA_PATH}.")
     if not os.path.exists(os.path.join(NLTK_DATA_PATH, 'corpora/stopwords')):
         raise FileNotFoundError(f"'stopwords' resource not found in {NLTK_DATA_PATH}.")
-    port = int(os.environ.get('PORT', 3001))
+    port = int(os.environ.get('PORT', 5000))
     app.run(debug=True, host='0.0.0.0', port=port)
