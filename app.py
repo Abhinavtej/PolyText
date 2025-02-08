@@ -11,7 +11,7 @@ import re
 nltk.download('punkt')
 nltk.download('stopwords')
 nltk.download('wordnet')
-nltk.download('omw-1.4')  # Fixed incorrect resource
+nltk.download('punkt_tab')
 
 stanza.download('en')
 stanza.download('hi')
