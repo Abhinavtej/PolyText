@@ -11,7 +11,7 @@ import re
 nltk.download('punkt')
 nltk.download('stopwords')
 nltk.download('wordnet')
-nltk.download('punkt_tab')
+nltk.download('omw-1.4')  # Fixed incorrect resource
 
 stanza.download('en')
 stanza.download('hi')
@@ -22,7 +22,12 @@ stanza.download('ur')
 # Language settings
 languages = {'hindi': 'hi', 'tamil': 'ta', 'telugu': 'te', 'urdu': 'ur'}
 languages_code = {1: 'English', 2: 'Telugu', 3: 'Hindi', 4: 'Tamil', 5: 'Urdu'}
-nlp_pipelines = {lang: stanza.Pipeline(code, processors='tokenize,pos,lemma') for lang, code in languages.items()}
+
+# Initialize NLP pipelines only when needed
+def get_nlp_pipeline(language):
+    if language in languages:
+        return stanza.Pipeline(lang=languages[language], processors='tokenize,pos,lemma', use_gpu=False)
+    return None
 
 language_suffixes = {
     "telugu": ["గా", "ను", "కి", "లో", "మీద"],
@@ -43,7 +48,10 @@ def remove_punctuations(text):
 
 def remove_stopwords(text, language):
     words = text.split()
-    stop_words = stopwords.words('english') if language == 'english' else adv.stopwords.get(language, [])
+    try:
+        stop_words = stopwords.words('english') if language == 'english' else adv.stopwords.get(language, [])
+    except:
+        stop_words = []
     return ' '.join([word for word in words if word.lower() not in stop_words])
 
 def stemming(text, language):
@@ -61,8 +69,13 @@ def stem_language_word(word, language):
 def lemmatization(text, language):
     if language == 'english':
         return [WordNetLemmatizer().lemmatize(word) for word in text.split()]
-    doc = nlp_pipelines[language](text)
-    return [word.lemma for sent in doc.sentences for word in sent.words]
+    
+    nlp = get_nlp_pipeline(language)
+    if nlp:
+        doc = nlp(text)
+        return [word.lemma for sent in doc.sentences for word in sent.words]
+    
+    return text.split()
 
 # Streamlit UI
 st.title("Multilingual Text Processor")
@@ -74,10 +87,13 @@ text_input = st.text_area("Enter your text")
 if st.button("Process Text"):
     if text_input:
         language = language_option.lower()
-        detected_language = detect(text_input)
         
-        if detected_language[:2] != language[:2]:
-            st.error("Text doesn't match the selected language.")
+        # Map detected language to Stanza format
+        detected_language = detect(text_input)
+        detected_language_full = next((lang for lang, code in languages.items() if code == detected_language), 'english')
+
+        if detected_language_full != language:
+            st.error(f"Text detected as {detected_language_full.capitalize()}, but you selected {language.capitalize()}.")
         else:
             processed_data = {
                 "Tokenized": tokenize(text_input),
