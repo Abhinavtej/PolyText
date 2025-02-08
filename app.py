@@ -7,8 +7,6 @@ from nltk.corpus import stopwords
 from nltk.stem import PorterStemmer, WordNetLemmatizer
 import re
 
-st.set_option('server.fileWatcherType', 'off')
-
 # Download required resources
 nltk.download('punkt')
 nltk.download('stopwords')
