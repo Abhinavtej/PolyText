@@ -3,15 +3,16 @@ import stanza
 import advertools as adv
 import streamlit as st
 from langdetect import detect
+from nltk.tokenize import word_tokenize
+from nltk import pos_tag
 from nltk.corpus import stopwords
 from nltk.stem import PorterStemmer, WordNetLemmatizer
 import re
 
-# Download required resources
 nltk.download('punkt')
+nltk.download('punkt_tab')
 nltk.download('stopwords')
 nltk.download('wordnet')
-nltk.download('punkt_tab')
 
 stanza.download('en')
 stanza.download('hi')
@@ -19,11 +20,9 @@ stanza.download('ta')
 stanza.download('te')
 stanza.download('ur')
 
-# Language settings
 languages = {'hindi': 'hi', 'tamil': 'ta', 'telugu': 'te', 'urdu': 'ur'}
 languages_code = {1: 'English', 2: 'Telugu', 3: 'Hindi', 4: 'Tamil', 5: 'Urdu'}
 
-# Initialize NLP pipelines only when needed
 def get_nlp_pipeline(language):
     if language in languages:
         return stanza.Pipeline(lang=languages[language], processors='tokenize,pos,lemma', use_gpu=False)
@@ -36,9 +35,20 @@ language_suffixes = {
     "urdu": ["نے", "گا", "گی", "کا", "کی"],
 }
 
-# Text Processing Functions
 def tokenize(text):
-    return nltk.word_tokenize(text)
+    return word_tokenize(text)
+
+def pos_tagging(text, language):
+    if language == 'english':
+        tokens = word_tokenize(text)
+        return pos_tag(tokens)
+    
+    nlp = get_nlp_pipeline(language)
+    if nlp:
+        doc = nlp(text)
+        return [(word.text, word.pos) for sentence in doc.sentences for word in sentence.words]
+    
+    return []
 
 def change_case(text, language):
     return (text.lower(), text.upper()) if language == 'english' else "Case change not supported."
@@ -77,35 +87,44 @@ def lemmatization(text, language):
     
     return text.split()
 
-# Streamlit UI
 st.title("Multilingual Text Processor")
 st.write("A simple NLP tool for text processing in multiple languages.")
 
 language_option = st.selectbox("Select Language", list(languages_code.values()))
 text_input = st.text_area("Enter your text")
 
+technique_option = st.selectbox("Select Processing Technique", [
+    "Tokenization", "POS Tagging", "Case Change", "Punctuation Removal",
+    "Stopwords Removal", "Stemming", "Lemmatization"
+])
+
 if st.button("Process Text"):
     if text_input:
         language = language_option.lower()
-        
-        # Map detected language to Stanza format
         detected_language = detect(text_input)
         detected_language_full = next((lang for lang, code in languages.items() if code == detected_language), 'english')
 
         if detected_language_full != language:
             st.error(f"Text detected as {detected_language_full.capitalize()}, but you selected {language.capitalize()}.")
         else:
-            processed_data = {
-                "Tokenized": tokenize(text_input),
-                "Case Changed": change_case(text_input, language),
-                "Punctuation Removed": remove_punctuations(text_input),
-                "Stopwords Removed": remove_stopwords(text_input, language),
-                "Stemming": stemming(text_input, language),
-                "Lemmatization": lemmatization(text_input, language),
-            }
+            if technique_option == "Tokenization":
+                result = tokenize(text_input)
+            elif technique_option == "POS Tagging":
+                result = pos_tagging(text_input, language)
+            elif technique_option == "Case Change":
+                result = change_case(text_input, language)
+            elif technique_option == "Punctuation Removal":
+                result = remove_punctuations(text_input)
+            elif technique_option == "Stopwords Removal":
+                result = remove_stopwords(text_input, language)
+            elif technique_option == "Stemming":
+                result = stemming(text_input, language)
+            elif technique_option == "Lemmatization":
+                result = lemmatization(text_input, language)
             
-            for key, value in processed_data.items():
-                st.subheader(key)
-                st.write(value)
+            st.subheader(technique_option)
+            st.write(result)
     else:
         st.warning("Please enter text to process.")
+
+st.write("Made with ❤️ by [Abhinavtej Reddy](https://abhinavtejreddy.me)")
